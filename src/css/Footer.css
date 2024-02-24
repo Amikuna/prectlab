@@ -1,0 +1,49 @@
+.footer-nav {
+  background-color: #14181b !important;
+}
+
+h4 {
+  color: white !important;
+}
+.fot {
+  align-items: center;
+}
+.email-control {
+  background-color: rgba(0, 0, 0, 0) !important;
+  color: white !important;
+}
+.em-label {
+  color: white;
+}
+.group {
+  text-align: start !important;
+}
+.email-control::placeholder {
+  color: #e49ff8 !important;
+}
+.email-control:focus {
+  background-color: rgba(0, 0, 0, 0) !important;
+  border: #e49ff8 solid 1px !important;
+  box-shadow: none !important;
+}
+.subscribe-head {
+  background-color: #e49ff8 !important;
+  color: white !important;
+  max-width: 120px;
+  width: 40% !important;
+  font-size: 13px !important;
+}
+.subscribe-head:hover {
+  background-color: #d275ec !important;
+}
+.subscribe:hover {
+  background-color: #d275ec !important;
+}
+.email-control:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+}
+@media (max-width: 600px) {
+  .foot-cont {
+    justify-content: center !important;
+  }
+}
