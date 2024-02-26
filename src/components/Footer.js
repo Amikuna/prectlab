@@ -69,6 +69,14 @@ function Footer() {
           </Nav>
         </Container>
       </Navbar>
+      <div className="attribution-block">
+        <p>
+          Images on the page are designed by{" "}
+          <a href="https://www.freepik.com/free-photo/html-system-websites-collage-design_135164524.htm">
+            Freepik
+          </a>
+        </p>
+      </div>
     </div>
   );
 }

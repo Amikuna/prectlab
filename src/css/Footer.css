@@ -1,7 +1,9 @@
 .footer-nav {
   background-color: #14181b !important;
 }
-
+.footer {
+  background-color: #14181b !important;
+}
 h4 {
   color: white !important;
 }
@@ -42,6 +44,11 @@ h4 {
 .email-control:-webkit-autofill {
   -webkit-box-shadow: 0 0 0 30px white inset !important;
 }
+.attribution-block {
+  display: flex;
+  justify-content: center;
+}
+
 @media (max-width: 600px) {
   .foot-cont {
     justify-content: center !important;
