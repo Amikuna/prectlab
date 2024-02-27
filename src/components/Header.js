@@ -24,7 +24,13 @@ function Header() {
           <Navbar.Collapse id="responsive-navbar-nav">
             <Nav className="me-auto"></Nav>
             <Nav className="text-end">
-              <Nav.Link href="/#pricing" style={{ color: "white" }}>
+              <Nav.Link href="/blog" style={{ color: "white !important" }}>
+                Blog
+              </Nav.Link>
+              <Nav.Link
+                href="/#pricing"
+                style={{ color: "white !important", marginLeft: "20px" }}
+              >
                 Pricing
               </Nav.Link>
 

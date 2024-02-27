@@ -15,11 +15,11 @@ function BlogPost() {
   const [thumbnail, setThumbnail] = useState("");
   const [documentId, setDocumentId] = useState(""); // State to store the document ID
   const collectionRef = collection(firestore, "BlogPost");
+  const [Loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Query to find the document based on the 'title' field
-    console.log(slug);
-    const q = query(collectionRef, where("title", "==", slug));
+    setLoading(true);
+    const q = query(collectionRef, where("slug", "==", slug));
 
     getDocs(q)
       .then((querySnapshot) => {
@@ -35,6 +35,7 @@ function BlogPost() {
         } else {
           console.log("Document not found");
         }
+        setLoading(false);
       })
       .catch((error) => {
         console.error("Error getting documents:", error);
@@ -44,23 +45,34 @@ function BlogPost() {
     <div className="BlogPost">
       <Header />
 
-      {title ? (
+      {Loading ? (
+        // Render a loading indicator while data is being fetched
+        <div className="post-wrapper">
+          <div className="blogBody d-flex justify-content-center">
+            <div className="loading-indicator">
+              <div className="loading-circle"></div>
+            </div>
+          </div>
+        </div>
+      ) : title ? (
+        // Render the blog post content if title exists
         <div className="post-wrapper">
           <div className="blogBody">
             <div className="title-wrapper">
-              <h1>{title}</h1>
+              <h1 className="title-wrap">{title}</h1>
             </div>
             <img className="thumbnail" src={thumbnail} alt="thumbnail" />
             <div className="body-wrapper">{parse(body)}</div>
           </div>
         </div>
       ) : (
+        // Render a message if the post doesn't exist
         <div className="post-wrapper">
           <div className="blogBody d-flex justify-content-center align-tems-center">
             <div className="d-flex align-items-center">
               <h1 className="sorry">&#128531;</h1>
             </div>
-            <h1 className="doesnt-exist">The Post Doesn't Exists!</h1>
+            <h1 className="doesnt-exist">The Post Doesn't Exist!</h1>
           </div>
         </div>
       )}
