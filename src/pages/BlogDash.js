@@ -2,11 +2,19 @@ import React, { useEffect, useRef, useState } from "react";
 import BundledEditor from "../components/BundledEditor";
 import Header from "../components/Header";
 import "../css/BlogDash.css";
-import { Form } from "react-bootstrap";
+import { Alert, Form } from "react-bootstrap";
 import { firestore, storage } from "../Firebase";
-
+import { useSearchParams } from "react-router-dom";
 import { ref, uploadBytes, getDownloadURL, listAll } from "firebase/storage";
-import { addDoc, collection } from "firebase/firestore";
+import {
+  doc,
+  addDoc,
+  updateDoc,
+  getDocs,
+  query,
+  where,
+  collection,
+} from "firebase/firestore";
 import { v4 } from "uuid";
 
 export default function BlogDash() {
@@ -16,50 +24,135 @@ export default function BlogDash() {
   const [thumbnail, setThumbnail] = useState(null);
   const imagesRef = ref(storage, "images/");
   const [imageLink, setImageLink] = useState(null);
-
-  useEffect(() => {}, []);
-
+  const [showAlert, setShowAlert] = useState(false);
+  const [searchParams] = useSearchParams();
+  const params = searchParams.get("blog");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [thumbnailLink, setThumbnailLink] = useState("");
+  const [documentId, setDocumentId] = useState(""); // State to store the document ID
+  const propValuePlaceholder = `<textarea>${body}</textarea>`;
   let data = {};
   let titleRef = useRef();
+  const [docId, setDocId] = useState(null);
+
+  useEffect(() => {
+    const q = query(collectionRef, where("slug", "==", params));
+
+    getDocs(q)
+      .then((querySnapshot) => {
+        if (!querySnapshot.empty) {
+          const doc = querySnapshot.docs[0];
+          const data = doc.data();
+          setDocId(doc.id); // Set the document ID in the state
+          setTitle(data.title);
+          setBody(data.body);
+          setThumbnailLink(data.thumbnail);
+        } else {
+          console.log("Document not found");
+        }
+      })
+      .catch((error) => {
+        console.error("Error getting documents:", error);
+      });
+  }, []);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    let thumbnailPath = `images/${thumbnail.name + v4()}`;
-    let thumbnailRef = ref(storage, thumbnailPath);
-    console.log(thumbnailRef);
-    let imLink = null;
+    if (title === null) {
+      if (thumbnail === null) {
+        setShowAlert(true);
+      } else {
+        setShowAlert(false);
+        let thumbnailPath = `images/${thumbnail.name + v4()}`;
+        let thumbnailRef = ref(storage, thumbnailPath);
 
-    uploadBytes(thumbnailRef, thumbnail).then((snapshot) => {
-      console.log("Uploaded a blob or file!");
-      listAll(imagesRef).then((res) => {
-        res.items.map((item) => {
-          if (item._location.path == thumbnailPath)
-            getDownloadURL(item).then((url) => {
-              data = {
-                thumbnail: url,
-                title: titleRef.current.value,
-                body: editorRef.current.getContent(),
-                slug: titleRef.current.value.toLowerCase().split(" ").join("-"),
-              };
-              try {
-                addDoc(collectionRef, data);
-              } catch (e) {
-                console.log(e);
-              }
-              console.log(data);
+        uploadBytes(thumbnailRef, thumbnail).then((snapshot) => {
+          listAll(imagesRef).then((res) => {
+            res.items.map((item) => {
+              if (item._location.path == thumbnailPath)
+                getDownloadURL(item).then((url) => {
+                  data = {
+                    thumbnail: url,
+                    title: titleRef.current.value,
+                    body: editorRef.current.getContent(),
+                    slug: titleRef.current.value
+                      .toLowerCase()
+                      .split(" ")
+                      .join("-"),
+                  };
+                  try {
+                    addDoc(collectionRef, data);
+                  } catch (e) {
+                    console.log(e);
+                  }
+                  console.log(data);
+                });
             });
+          });
         });
-      });
-    });
 
-    setTimeout(() => {
-      setPublished(true);
-    }, 1000);
+        setTimeout(() => {
+          setPublished(true);
+        }, 1000);
+      }
+    } else {
+      if (thumbnail === null) {
+        console.log(editorRef.current.getContent());
+        data = {
+          title: titleRef.current.value,
+          body: editorRef.current.getContent(),
+          slug: titleRef.current.value.toLowerCase().split(" ").join("-"),
+        };
+        try {
+          updateDoc(doc(firestore, "BlogPost", docId), data);
+        } catch (e) {
+          console.log(e);
+        }
+        console.log(data);
+      } else {
+        let thumbnailPath = `images/${thumbnail.name + v4()}`;
+        let thumbnailRef = ref(storage, thumbnailPath);
+
+        uploadBytes(thumbnailRef, thumbnail).then((snapshot) => {
+          listAll(imagesRef).then((res) => {
+            res.items.map((item) => {
+              if (item._location.path == thumbnailPath)
+                getDownloadURL(item).then((url) => {
+                  data = {
+                    thumbnail: url,
+                    title: titleRef.current.value,
+                    body: editorRef.current.getContent(),
+                    slug: titleRef.current.value
+                      .toLowerCase()
+                      .split(" ")
+                      .join("-"),
+                  };
+                  try {
+                    addDoc(collectionRef, data);
+                  } catch (e) {
+                    console.log(e);
+                  }
+                  console.log(data);
+                });
+            });
+          });
+        });
+      }
+
+      setTimeout(() => {
+        setPublished(true);
+      }, 1000);
+    }
   };
   return (
     <div className="blog-dash">
       <Header />
       <div className="editor-container">
+        <Alert show={showAlert} variant="danger">
+          Please upload a thumbnail image
+        </Alert>
         <Form onSubmit={handleSubmit}>
           {/* <Form> */}
           <Form.Group
@@ -77,12 +170,18 @@ export default function BlogDash() {
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label style={{ color: "#fff" }}>Title</Form.Label>
-            <Form.Control type="text" placeholder="Title" ref={titleRef} />
+            <Form.Control
+              type="text"
+              placeholder="Title"
+              ref={titleRef}
+              defaultValue={title}
+            />
           </Form.Group>
           <Form.Group className="mb-3 group " controlId="formBasicEmail">
             <BundledEditor
               onInit={(evt, editor) => (editorRef.current = editor)}
               // initialValue="This is the initial content of the editor."
+              initialValue={body}
               init={{
                 height: 500,
                 menubar: false,
