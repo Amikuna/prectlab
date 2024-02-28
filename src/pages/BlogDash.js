@@ -1,219 +1,88 @@
-import React, { useEffect, useRef, useState } from "react";
-import BundledEditor from "../components/BundledEditor";
+import React, { useEffect, useState } from "react";
 import Header from "../components/Header";
+import Footer from "../components/Footer";
 import "../css/BlogDash.css";
-import { Alert, Form } from "react-bootstrap";
-import { firestore, storage } from "../Firebase";
-import { useSearchParams } from "react-router-dom";
-import { ref, uploadBytes, getDownloadURL, listAll } from "firebase/storage";
-import {
-  doc,
-  addDoc,
-  updateDoc,
-  getDocs,
-  query,
-  where,
-  collection,
-} from "firebase/firestore";
-import { v4 } from "uuid";
+import { firestore } from "../Firebase";
+import { doc, deleteDoc, getDocs, collection } from "firebase/firestore";
+import { Col, Row } from "react-bootstrap";
+import parse from "html-react-parser";
 
-export default function BlogDash() {
-  const editorRef = useRef(null);
+function Blog() {
   const collectionRef = collection(firestore, "BlogPost");
-  const [published, setPublished] = useState(false);
-  const [thumbnail, setThumbnail] = useState(null);
-  const imagesRef = ref(storage, "images/");
-  const [imageLink, setImageLink] = useState(null);
-  const [showAlert, setShowAlert] = useState(false);
-  const [searchParams] = useSearchParams();
-  const params = searchParams.get("blog");
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [thumbnailLink, setThumbnailLink] = useState("");
-  const [documentId, setDocumentId] = useState(""); // State to store the document ID
-  const propValuePlaceholder = `<textarea>${body}</textarea>`;
-  let data = {};
-  let titleRef = useRef();
-  const [docId, setDocId] = useState(null);
+  const [blogPosts, setBlogPosts] = useState([]);
+  const [docId, setDocId] = useState([]);
+  const truncateText = (text, maxWords) => {
+    const words = text.split(" ");
+    const truncatedWords = words.slice(0, maxWords);
+    return truncatedWords.join(" ");
+  };
+  const deleteBlogPost = async (id) => {
+    const docRef = doc(firestore, "BlogPost", id);
+    deleteDoc(docRef);
+    getDocs(collectionRef).then((querySnapshot) => {
+      const updatedBlogPosts = [];
+      const updatedDocIds = [];
+
+      querySnapshot.forEach((doc) => {
+        updatedBlogPosts.push(doc.data());
+        updatedDocIds.push(doc.id);
+      });
+
+      // Update state with the new data
+      setBlogPosts(updatedBlogPosts);
+      setDocId(updatedDocIds);
+    });
+  };
 
   useEffect(() => {
-    const q = query(collectionRef, where("slug", "==", params));
-
-    getDocs(q)
-      .then((querySnapshot) => {
-        if (!querySnapshot.empty) {
-          const doc = querySnapshot.docs[0];
-          const data = doc.data();
-          setDocId(doc.id); // Set the document ID in the state
-          setTitle(data.title);
-          setBody(data.body);
-          setThumbnailLink(data.thumbnail);
-        } else {
-          console.log("Document not found");
-        }
-      })
-      .catch((error) => {
-        console.error("Error getting documents:", error);
+    getDocs(collectionRef).then((querySnapshot) => {
+      querySnapshot.forEach((doc) => {
+        setBlogPosts((prevState) => [...prevState, doc.data()]);
+        setDocId((prevState) => [...prevState, doc.id]);
       });
+    });
   }, []);
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    if (title === null) {
-      if (thumbnail === null) {
-        setShowAlert(true);
-      } else {
-        setShowAlert(false);
-        let thumbnailPath = `images/${thumbnail.name + v4()}`;
-        let thumbnailRef = ref(storage, thumbnailPath);
-
-        uploadBytes(thumbnailRef, thumbnail).then((snapshot) => {
-          listAll(imagesRef).then((res) => {
-            res.items.map((item) => {
-              if (item._location.path == thumbnailPath)
-                getDownloadURL(item).then((url) => {
-                  data = {
-                    thumbnail: url,
-                    title: titleRef.current.value,
-                    body: editorRef.current.getContent(),
-                    slug: titleRef.current.value
-                      .toLowerCase()
-                      .split(" ")
-                      .join("-"),
-                  };
-                  try {
-                    addDoc(collectionRef, data);
-                  } catch (e) {
-                    console.log(e);
-                  }
-                  console.log(data);
-                });
-            });
-          });
-        });
-
-        setTimeout(() => {
-          setPublished(true);
-        }, 1000);
-      }
-    } else {
-      if (thumbnail === null) {
-        console.log(editorRef.current.getContent());
-        data = {
-          title: titleRef.current.value,
-          body: editorRef.current.getContent(),
-          slug: titleRef.current.value.toLowerCase().split(" ").join("-"),
-        };
-        try {
-          updateDoc(doc(firestore, "BlogPost", docId), data);
-        } catch (e) {
-          console.log(e);
-        }
-        console.log(data);
-      } else {
-        let thumbnailPath = `images/${thumbnail.name + v4()}`;
-        let thumbnailRef = ref(storage, thumbnailPath);
-
-        uploadBytes(thumbnailRef, thumbnail).then((snapshot) => {
-          listAll(imagesRef).then((res) => {
-            res.items.map((item) => {
-              if (item._location.path == thumbnailPath)
-                getDownloadURL(item).then((url) => {
-                  data = {
-                    thumbnail: url,
-                    title: titleRef.current.value,
-                    body: editorRef.current.getContent(),
-                    slug: titleRef.current.value
-                      .toLowerCase()
-                      .split(" ")
-                      .join("-"),
-                  };
-                  try {
-                    addDoc(collectionRef, data);
-                  } catch (e) {
-                    console.log(e);
-                  }
-                  console.log(data);
-                });
-            });
-          });
-        });
-      }
-
-      setTimeout(() => {
-        setPublished(true);
-      }, 1000);
-    }
-  };
   return (
-    <div className="blog-dash">
+    <div className="blog">
       <Header />
-      <div className="editor-container">
-        <Alert show={showAlert} variant="danger">
-          Please upload a thumbnail image
-        </Alert>
-        <Form onSubmit={handleSubmit}>
-          {/* <Form> */}
-          <Form.Group
-            controlId="formFile"
-            className="mb-3"
-            style={{ color: "#fff" }}
-          >
-            <Form.Label>Upload Thumbnail</Form.Label>
-            <Form.Control
-              type="file"
-              onChange={(e) => {
-                setThumbnail(e.target.files[0]);
-              }}
-            />
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label style={{ color: "#fff" }}>Title</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Title"
-              ref={titleRef}
-              defaultValue={title}
-            />
-          </Form.Group>
-          <Form.Group className="mb-3 group " controlId="formBasicEmail">
-            <BundledEditor
-              onInit={(evt, editor) => (editorRef.current = editor)}
-              // initialValue="This is the initial content of the editor."
-              initialValue={body}
-              init={{
-                height: 500,
-                menubar: false,
-                plugins: [
-                  "advlist",
-                  "anchor",
-                  "autolink",
-                  "help",
-                  "image",
-                  "link",
-                  "lists",
-                  "searchreplace",
-                  "table",
-                  "wordcount",
-                ],
-                toolbar:
-                  "undo redo | blocks | " +
-                  "bold italic forecolor | alignleft aligncenter " +
-                  "alignright alignjustify | bullist numlist outdent indent | " +
-                  "removeformat | help",
-                content_style:
-                  "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }",
-              }}
-            />
-          </Form.Group>
-          <div className="save-cont">
-            <button className="btn send" type="submit">
-              {published ? "Published!" : "Publish"}
-            </button>
-          </div>
-        </Form>
+      <div className="blog-wrapper">
+        <Col className="blog-row">
+          {blogPosts.map((blogPost, index) => (
+            <Row className="post-col" md={6}>
+              <div className="dash-blog-post" key={blogPost.title}>
+                <img
+                  className="dash-post-image"
+                  src={blogPost.thumbnail}
+                  alt=""
+                />
+                <a className="post-link" href={`/blog/${blogPost.slug}`}>
+                  <h5>{blogPost.title}</h5>
+                </a>
+                <div className="me-auto"></div>
+                <div className="post-body-wrap d-flex align-items-center">
+                  <a href={`/blogdash/post?blog=${blogPost.slug}`}>
+                    <button className="btn edit-button">Edit</button>
+                  </a>
+                </div>
+                <div
+                  className="post-body-wrap d-flex align-items-center"
+                  style={{ marginLeft: "10px" }}
+                >
+                  <button
+                    onClick={() => deleteBlogPost(docId[index])}
+                    className="btn delete-button"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </Row>
+          ))}
+        </Col>
       </div>
+      <Footer className="blog-footer" />
     </div>
   );
 }
+
+export default Blog;

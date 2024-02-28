@@ -1,0 +1,15 @@
+#text-edit-area {
+  background-color: aqua !important;
+}
+.editor-container {
+  margin-top: 100px !important;
+  width: 100% !important;
+}
+.tox-tinymce {
+  min-width: 100% !important;
+}
+.save-cont {
+  margin-top: 20px !important;
+  display: flex;
+  justify-content: center !important;
+}

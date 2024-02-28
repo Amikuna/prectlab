@@ -1,6 +1,7 @@
 import "./App.css";
 import Home from "./pages/Home";
 import Contact from "./pages/Contact";
+import BlogDashPost from "./pages/BlogDashPost";
 import BlogDash from "./pages/BlogDash";
 import BlogPost from "./pages/BlogPost";
 import Blog from "./pages/Blog";
@@ -14,6 +15,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/blogdash/post" element={<BlogDashPost />} />
           <Route path="/blogdash" element={<BlogDash />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/blog" element={<Blog />} />
